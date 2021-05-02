@@ -1,0 +1,6 @@
+.section    .start
+.global     _start
+
+_start:
+	j main
+	j main
