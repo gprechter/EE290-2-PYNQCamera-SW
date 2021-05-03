@@ -5,7 +5,7 @@
 #define USER_PROG_START 0x8000C000
 #define DATA 0x200C
 #define VSYNC 0x200D
-#define P_CLK 0x200F
+#define P_CLK 0x200E
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -34,15 +34,15 @@ void waitForPCLKRisingEdge() {
 	while(!reg_read8(P_CLK));
 }
 
-void processFrame() {
-	uint8_t lineBuffer [160 * 2 + 1 + 5];
+void processFrameOLD() {
+	uint8_t lineBuffer [160 * 2];
 	uint16_t lineBufferIndex = 0;
 	kputc(0x00);	
 	for (uint16_t y = 0; y < 120; y++) {
 		lineBufferIndex = 0;
 		uint8_t sendWhileReadCounter = 4;
 		lineBuffer[0] = 0;
-		for (uint16_t x = 1; x < 160 * 2 + 1; x++) {
+		for (uint16_t x = 1; x < 160 * 2; x++) {
 			if (sendWhileReadCounter) {
 				sendWhileReadCounter--;
 			} else {
@@ -70,21 +70,54 @@ void processFrame() {
 	}
 }
 
-int main(void) {			
-	reg_write8(UART_TX_CONTROL, 0x01);
-	reg_write8(UART_RX_CONTROL, 0x01);
+void processFrame(uint8_t* buffer) {
+	int r;
+	int c;
+	for (r = 0; r < 120; r++) {
+		buffer[r * 160 * 2] = 0;
+		for (c = 0; c < 160; c++) {
+			while (*((volatile uint8_t *)P_CLK) & 0x1);
+			while (!(*((volatile uint8_t *)P_CLK) & 0x1));
+			buffer[1 + (r * 160 + c) * 2] = *((volatile uint8_t *)DATA);
+			while (*((volatile uint8_t *)P_CLK) & 0x1);
+			while (!(*((volatile uint8_t *)P_CLK) & 0x1));
+			buffer[1 + (r * 160 + c) * 2 + 1] = *((volatile uint8_t *)DATA);
+		}
+	}
+}
 
-	char c;
-	//kputs("Connected to FPGA...", true);
+void sendFrame(uint8_t* buffer) {
+	kputc(0x00);
+	int bufferIndex = 0;
+	while (bufferIndex < 160 * 120 * 2 + 120) {
+			if (bufferIndex & 0x01) {
+											//gggbbbbb
+                kputc(buffer[bufferIndex] | 0b00100001);
+            } else {
+											//rrrrrggg
+                kputc(buffer[bufferIndex] | 0b00001000);
+            }	
+			bufferIndex++;
+		}
+}
+
+int main(void) {			
+	//reg_write8(UART_TX_CONTROL, 0x01);
+	//reg_write8(UART_RX_CONTROL, 0x01);
+	uint8_t imageBuffer[160 * 120 * 2 + 120];
+	//char c;
+	
 	//I2C_init();
 	while (true) {
+		/*if (kgetc(&c)) {
+			kputc(c);
+		}
 		*((uint8_t *) LED0) = *((uint8_t *) SWITCH0);
-		*((uint8_t *) LED1) = *((uint8_t *) SWITCH1);
-        /*
-		while(!kgetc(&c));
-		waitForVsync();			
-		processFrame();		
+		*((uint8_t *) LED1) = *((uint8_t *) SWITCH1);  
 		*/
+		waitForVsync();			
+		processFrame(imageBuffer);	
+		sendFrame(imageBuffer);	
 	}
 	return 0;
 }

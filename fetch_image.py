@@ -5,23 +5,19 @@ from graphics import *
 ser = serial.Serial(sys.argv[1])
 ser.baudrate = 115200
 win = GraphWin("Image", 160, 120)
-while ser.read() != 0x00:
-	pass
+while ser.read() != b'\x00':
+	pass 
+ser.write(0)
 print("Beginning...")
 bytes = ser.read(160 * 2 * 120)
 print(len(bytes))
-for i in range(120):
-	j = 0
-	for e in list(range(160 * 2))[::2]: 
-		first = bytes[i * (160 * 2) + e]
-		second = bytes[i * (160 * 2) + e + 1]
-		r = (first) & 0xF8
-		g = (first & 0x7) << 5 | (second >> 3)
-		b = (second << 3) & 0xF8
-		pt = Point(j, i)
-		pt.setFill(color_rgb(int(r), int(g), int(b)))
+for r in range(120):
+	for c in range(160):
+		first = bytes[(r * 160 + c) * 2]
+		second = bytes[(r * 160 + c) * 2 + 1]
+		red = (first) & 0xF8
+		green = (first & 0x7) << 5 | (second >> 3)
+		blue = (second << 3) & 0xF8
+		pt = Point(c, r)
+		pt.setFill(color_rgb(int(red), int(green), int(blue)))
 		pt.draw(win)
-		j += 1
-
-while True:
-	pass
