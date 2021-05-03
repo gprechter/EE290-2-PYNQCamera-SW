@@ -1,7 +1,7 @@
 #include "I2C.h"
-#include <avr/io.h>
-#include <util/twi.h>
-#include <util/delay.h>
+//#include <avr/io.h>
+//#include <util/twi.h>
+//#include <util/delay.h>
 #include <avr/pgmspace.h>
 
 void I2C_init() {
