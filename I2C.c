@@ -2,7 +2,7 @@
 //#include <avr/io.h>
 //#include <util/twi.h>
 //#include <util/delay.h>
-//#include <avr/pgmspace.h>
+#include <avr/pgmspace.h>
 
 void I2C_init() {
 	reg_write8(ctrl_addr, 0x00);
