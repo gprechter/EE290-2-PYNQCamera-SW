@@ -175,4 +175,43 @@ static const struct regval_list qqvga_ov7670[] PROGMEM = {
 	{0xff, 0xff},	/* END MARKER */
 };
 
+void setColorSpace(enum COLORSPACE color){
+	switch(color){
+		case YUV422:
+			wrSensorRegs8_8(yuv422_ov7670);
+		break;
+		case RGB565:
+			wrSensorRegs8_8(rgb565_ov7670);
+			{uint8_t temp=rdReg(0x11);
+			_delay_ms(1);
+			wrReg(0x11,temp);}//according to the Linux kernel driver rgb565 PCLK needs rewriting
+		break;
+		case BAYER_RGB:
+			wrSensorRegs8_8(bayerRGB_ov7670);
+		break;
+	}
+}
+void setRes(enum RESOLUTION res){
+	switch(res){
+		case VGA:
+			wrReg(REG_COM3,0);	// REG_COM3
+			wrSensorRegs8_8(vga_ov7670);
+		break;
+		case QVGA:
+			wrReg(REG_COM3,4);	// REG_COM3 enable scaling
+			wrSensorRegs8_8(qvga_ov7670);
+		break;
+		case QQVGA:
+			wrReg(REG_COM3,4);	// REG_COM3 enable scaling
+			wrSensorRegs8_8(qqvga_ov7670);
+		break;
+	}
+}
+void camInit(void){
+	wrReg(0x12, 0x80);//Reset the camera.
+	_delay_ms(100);
+	wrSensorRegs8_8(ov7670_default_regs);
+	wrReg(REG_COM10,32);//PCLK does not toggle on HBLANK.
+}
+
 /********For Camera Control**********/
