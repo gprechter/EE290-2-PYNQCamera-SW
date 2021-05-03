@@ -2,7 +2,7 @@
 //#include <avr/io.h>
 //#include <util/twi.h>
 //#include <util/delay.h>
-#include <avr/pgmspace.h>
+//#include <avr/pgmspace.h>
 
 void I2C_init() {
 	reg_write8(ctrl_addr, 0x00);
@@ -182,7 +182,7 @@ static void wrSensorRegs8_8(const struct regval_list reglist[]){
 		uint8_t reg_val = pgm_read_byte(&next->value);
 		if((reg_addr==255)&&(reg_val==255))
 			break;
-		wrReg(reg_addr, reg_val);
+		reg_write8(reg_addr, reg_val);
 		next++;
 	}
 }
@@ -191,17 +191,17 @@ void setColorSpace(enum COLORSPACE color){
 		wrSensorRegs8_8(rgb565_ov7670);
 		{uint8_t temp=rdReg(0x11);
 		_delay_ms(1);
-		wrReg(0x11,temp);}//according to the Linux kernel driver rgb565 PCLK needs rewriting
+		reg_write8(0x11,temp);}//according to the Linux kernel driver rgb565 PCLK needs rewriting
 }
 void setRes(enum RESOLUTION res){
-		wrReg(REG_COM3,4);	// REG_COM3 enable scaling
+		reg_write8(REG_COM3,4);	// REG_COM3 enable scaling
 		wrSensorRegs8_8(qqvga_ov7670);	
 }
 void camInit(void){
-	wrReg(0x12, 0x80);//Reset the camera.
+	reg_write8(0x12, 0x80);//Reset the camera.
 	_delay_ms(100);
 	wrSensorRegs8_8(ov7670_default_regs);
-	wrReg(REG_COM10,32);//PCLK does not toggle on HBLANK.
+	reg_write8(REG_COM10,32);//PCLK does not toggle on HBLANK.
 }
 
 /********For Camera Control**********/
