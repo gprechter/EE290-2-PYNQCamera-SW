@@ -35,7 +35,7 @@ void waitForPCLKRisingEdge() {
 }
 
 uint8_t grayScale(uint8_t r, uint8_t g, uint8_t b) {
-	return r >> 2 + g >> 1 + b >> 3;
+	return (r >> 2) + (g >> 1) + (b >> 3);
 }
 
 void processFrameOLD() {
@@ -90,38 +90,50 @@ void processFrame(uint8_t* buffer) {
 	}
 }
 
-void sendFrame(uint8_t* buffer) {
+uint8_t extractGrayScalePixel(uint8_t* buffer, int bufferIndex) {
+	uint8_t first = buffer[2 * bufferIndex];
+	uint8_t second = buffer[2 * bufferIndex + 1];
+	uint8_t r = first & 0xF8;
+	uint8_t g = (first & 0x7) << 5 | (second >> 3);
+	uint8_t b = (second << 3) & 0xF8;
+	return grayScale(r, g, b);
+}
+
+uint8_t applyKernel(uint8_t* buffer, int row, int column, int* kernel) {
+	
+	int sum = 0;
+	for (int i = -1; i < 2; i++) {
+		for (int j=-1; j < 2; j++) {
+			if (!(row + i < 0 || column + j < 0 || row + i >= 120 || column + j >= 160)) {
+				sum = sum + ((kernel[(4 + 3 * i + j)] * (int) extractGrayScalePixel(buffer, 160 * (row + i) + (column + j))) >> 4);
+			}
+		}
+	}
+	
+	return sum < 0 ? 0 : sum > 255 ? 255 : (uint8_t) sum;
+}
+
+void sendFrame(uint8_t* buffer, int* kernel) {
+	char c;
 	kputc(0x00);
 	int bufferIndex = 0;
-	uint8_t pixel = 0;
-	while (bufferIndex < 160 * 120 * 2 + 120) {
-			/*
-			uint8_t r = buffer[bufferIndex] >> 3;
-			uint8_t g = buffer[bufferIndex] << 3 | buffer[bufferIndex + 1] & 0x7;
-			uint8_t b = buffer[bufferIndex + 1] & 0x1F;
-			pixel = grayScale(r, g, b);
-			kputc(pixel | 0x1);
-			*/
-			
-			if (bufferIndex & 0x01) {
-											//gggbbbbb
-                kputc(buffer[bufferIndex] | 0b00100001);
-            } else {
-											//rrrrrggg
-                kputc(buffer[bufferIndex] | 0b00001000);
-            }	
-
-			bufferIndex++;
-			//bufferIndex++;
+	for (int r = 0; r < 120; r++) {
+		for (int c = 0; c < 160; c++) {
+			kputc(applyKernel(buffer, r, c, kernel) | 0x1);
 		}
+	}
+	return;
 }
 
 int main(void) {			
 	//reg_write8(UART_TX_CONTROL, 0x01);
 	//reg_write8(UART_RX_CONTROL, 0x01);
+	
+    int kernel[9] = { 1, 2 ,  1, 
+					  2,  4,  2, 
+					  1,  2,  1};
 	uint8_t imageBuffer[160 * 120 * 2 + 120];
 	//char c;
-	
 	//I2C_init();
 	while (true) {
 		/*if (kgetc(&c)) {
@@ -132,7 +144,7 @@ int main(void) {
 		
 		waitForVsync();			
 		processFrame(imageBuffer);	
-		sendFrame(imageBuffer);	
+		sendFrame(imageBuffer, kernel);		
 	}
 	return 0;
 }
