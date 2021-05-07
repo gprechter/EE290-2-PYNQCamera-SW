@@ -5,7 +5,7 @@
 #define USER_PROG_START 0x8000C000
 #define DATA 0x200C
 #define VSYNC 0x200D
-#define P_CLK 0x200E
+#define P_CLK 0x200F
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -32,6 +32,10 @@ void waitForVsync() {
 void waitForPCLKRisingEdge() {
 	while(reg_read8(P_CLK));
 	while(!reg_read8(P_CLK));
+}
+
+uint8_t grayScale(uint8_t r, uint8_t g, uint8_t b) {
+	return r >> 2 + g >> 1 + b >> 3;
 }
 
 void processFrameOLD() {
@@ -89,7 +93,16 @@ void processFrame(uint8_t* buffer) {
 void sendFrame(uint8_t* buffer) {
 	kputc(0x00);
 	int bufferIndex = 0;
+	uint8_t pixel = 0;
 	while (bufferIndex < 160 * 120 * 2 + 120) {
+			/*
+			uint8_t r = buffer[bufferIndex] >> 3;
+			uint8_t g = buffer[bufferIndex] << 3 | buffer[bufferIndex + 1] & 0x7;
+			uint8_t b = buffer[bufferIndex + 1] & 0x1F;
+			pixel = grayScale(r, g, b);
+			kputc(pixel | 0x1);
+			*/
+			
 			if (bufferIndex & 0x01) {
 											//gggbbbbb
                 kputc(buffer[bufferIndex] | 0b00100001);
@@ -97,7 +110,9 @@ void sendFrame(uint8_t* buffer) {
 											//rrrrrggg
                 kputc(buffer[bufferIndex] | 0b00001000);
             }	
+
 			bufferIndex++;
+			//bufferIndex++;
 		}
 }
 
@@ -111,10 +126,10 @@ int main(void) {
 	while (true) {
 		/*if (kgetc(&c)) {
 			kputc(c);
-		}
-		*((uint8_t *) LED0) = *((uint8_t *) SWITCH0);
-		*((uint8_t *) LED1) = *((uint8_t *) SWITCH1);  
-		*/
+		}*/
+		//*((uint8_t *) LED0) = *((uint8_t *) SWITCH0);
+		//*((uint8_t *) LED1) = *((uint8_t *) SWITCH1);  
+		
 		waitForVsync();			
 		processFrame(imageBuffer);	
 		sendFrame(imageBuffer);	
